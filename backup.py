@@ -12,6 +12,7 @@ import gnupg
 # - Verbosity
 # - Better crypto home dir selection
 # - Better aws account selection
+# - Region setting
 
 
 def upload_file_list(filelist):
@@ -99,12 +100,3 @@ if __name__ == "__main__":
                    args.dry_run)
     end_time = datetime.utcnow()
     print('Run duration {}'.format(end_time - start_time))
-
-'''
-vaults = client.list_vaults()
-print(vaults)
-
-for v in vaults['VaultList']:
-    print(v['CreationDate'])
-'''
-
