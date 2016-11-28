@@ -1,0 +1,17 @@
+# - Name - Not functional but order does specify the priority of each bin.
+# count - The number of instances of a certain bin, if count is not included,
+#           it is eqivalent to an indefinite number (ie continuous)
+# period_unit - days, weeks, months, years
+- WeeklyPolicy:
+    count: 4
+    period: 1
+    period_unit: weeks
+
+- MonthlyPolicy:
+    count: 4
+    period: 1
+    period_unit: months
+
+- YearlyPolicy:
+    period: 1
+    period_unit: years

@@ -1,7 +1,11 @@
-###
 Default AWS credentials are assumed to be in ~/.aws/configure
 
 GPG keys are assumed to be in ~/.gnupg/
+
+### Backup
+```
+python3 backup.py testdir/ ~/projects/test/
+```
 
 ### Decrypt
 ```
