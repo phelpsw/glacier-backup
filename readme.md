@@ -4,13 +4,15 @@ GPG keys are assumed to be in ~/.gnupg/
 
 ```
 sudo apt-get install python3 python3-pip awscli gnupg
-pip3 install boto3
+pip3 install boto3 gnupg
 ```
 
 Configure aws credentials
 ```
 aws configure
 ```
+
+Key configuration
 ```
 gpg --gen-key
 # Select RSA (sign only) (4)
