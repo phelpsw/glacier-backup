@@ -59,10 +59,10 @@ def create_backups(directories, unencrypted, cryptokey, dry_run):
             if not unencrypted:
                 # Encrypt archive file
                 abscryptfile = '{}.gpg'.format(absbkfile)
-                gpg = gnupg.GPG(gnupghome='~/.gnupg')
+                gpg = gnupg.GPG(homedir='~/.gnupg')
                 with open(absbkfile, 'rb') as f:
-                    status = gpg.encrypt_file(
-                        f, recipients=[cryptokey],
+                    status = gpg.encrypt(
+                        f, cryptokey,
                         output=abscryptfile,
                         armor=False)
                     print(abscryptfile)
