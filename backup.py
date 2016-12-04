@@ -59,7 +59,8 @@ def create_backups(directories, unencrypted, cryptokey, dry_run):
             if not unencrypted:
                 # Encrypt archive file
                 abscryptfile = '{}.gpg'.format(absbkfile)
-                gpg = gnupg.GPG(homedir='~/.gnupg')
+                gpg = gnupg.GPG(homedir=os.path.join(_dir, 'gnupg'))
+                gpg.recv_keys(cryptokey, keyserver='hkp://pgp.mit.edu')
                 with open(absbkfile, 'rb') as f:
                     status = gpg.encrypt(
                         f, cryptokey,
