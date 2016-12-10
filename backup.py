@@ -51,7 +51,13 @@ def create_backup(args):
     # Encrypt archive file
     abscryptfile = '{}.gpg'.format(absbkfile)
     gpg = gnupg.GPG(homedir=os.path.join(scratch, 'gnupg'))
-    gpg.recv_keys(cryptokey, keyserver='hkp://pgp.mit.edu')
+    status = gpg.encrypt('test', cryptokey)
+    if not status.ok:
+        print('Retreiving key {} from keyserver'.format(cryptokey))
+        status = gpg.recv_keys(cryptokey, keyserver='hkp://pgp.mit.edu')
+        if not status.results[0]['fingerprint']:
+            print('Failed to retrieve key')
+            return
     with open(absbkfile, 'rb') as f:
         status = gpg.encrypt(
             f, cryptokey,
