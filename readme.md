@@ -3,7 +3,8 @@ Default AWS credentials are assumed to be in ~/.aws/configure
 GPG keys are assumed to be in ~/.gnupg/
 
 ```
-sudo apt-get install python3 python3-pip awscli gnupg
+sudo apt-get install python3-dev python3-pip awscli gnupg
+pip3 install setuptools wheel
 pip3 install boto3 gnupg
 ```
 
