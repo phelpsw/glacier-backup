@@ -25,7 +25,7 @@ def upload_file(archive, _file):
     print(response)
     hostname = open('/etc/hostname').read().rstrip()
     timestamp = datetime.utcnow().isoformat()
-    client.add_tags_to_vault(vaultName=archive_name,
+    client.add_tags_to_vault(vaultName=archive,
                              Tags={'hostname': hostname,
                                    'timestamp': timestamp})
 
