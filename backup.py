@@ -6,8 +6,8 @@ import os
 import tarfile
 import argparse
 import tempfile
-import gnupg
 from multiprocessing import Pool
+import subprocess
 
 # TODO
 # - Verbosity
@@ -31,11 +31,12 @@ def upload_file(archive, _file):
 
 
 def create_backup(args):
-    path, scratch, cryptokey, archive, dry_run = args
+    path, scratch, cryptokey, archive, gpg_home, dry_run = args
 
     abspath = os.path.abspath(path)
     bkupfile = os.path.basename(abspath) + '.tar.xz'
     absbkfile = os.path.join(scratch, bkupfile)
+    abscryptfile = '{}.gpg'.format(absbkfile)
 
     if not os.path.isdir(abspath):
         print('Unknown directory {}'.format(abspath))
@@ -49,30 +50,30 @@ def create_backup(args):
     tar.close()
 
     # Encrypt archive file
-    abscryptfile = '{}.gpg'.format(absbkfile)
-    gpg = gnupg.GPG(homedir=os.path.join(scratch, 'gnupg'))
-    status = gpg.encrypt('test', cryptokey)
-    if not status.ok:
-        print('Retreiving key {} from keyserver'.format(cryptokey))
-        status = gpg.recv_keys(cryptokey, keyserver='hkp://pgp.mit.edu')
-        if not status.results[0]['fingerprint']:
-            print('Failed to retrieve key')
-            return
-    with open(absbkfile, 'rb') as f:
-        status = gpg.encrypt(
-            f, cryptokey,
-            output=abscryptfile,
-            armor=False)
-        print(abscryptfile)
-        if not status.ok:
-            print('Encryption error')
-            return
+    ret = subprocess.call(['/usr/bin/gpg', '--homedir', gpg_home, '--trust-model', 'always', '--encrypt', '-r', cryptokey, '--output', abscryptfile, absbkfile])
+    print(abscryptfile)
+    if ret:
+        print('Encryption error {}'.format(abscryptfile))
+        return
+
     os.remove(absbkfile)
 
     if not dry_run:
         upload_file(archive, abscryptfile)
     os.remove(abscryptfile)
     
+
+def setup_gpg_keys(_dir, cryptokey):
+    gpg_home = os.path.join(_dir, 'gnupg')
+    if not os.path.isdir(gpg_home):
+        print('Did not find dir {}'.format(gpg_home))
+        os.makedirs(gpg_home, mode=0o700)
+    ret = subprocess.call(['/usr/bin/gpg', '--homedir', gpg_home, '-q', '--keyserver', 'pgp.mit.edu', '--recv-keys', cryptokey])
+    if ret:
+        print('Failed to retrieve key')
+        raise AttributeError
+    return gpg_home
+
 
 def create_backups(directories, scratch, cryptokey, threads, dry_run):
     archive = 'glacier_archive_{}'.format(
@@ -81,12 +82,14 @@ def create_backups(directories, scratch, cryptokey, threads, dry_run):
     response = client.create_vault(vaultName=archive,
                                    accountId='-')
     if scratch:
-        process_args = [(x, scratch, cryptokey, archive, dry_run) for x in directories]
+        gpg_home = setup_gpg_keys(scratch, cryptokey)
+        process_args = [(x, scratch, cryptokey, archive, gpg_home, dry_run) for x in directories]
         pool = Pool(threads)
         pool.map(create_backup, process_args)
     else:
         with tempfile.TemporaryDirectory() as _dir:
-            process_args = [(x, _dir, cryptokey, archive, dry_run) for x in directories]
+            gpg_home = setup_gpg_keys(_dir, cryptokey)
+            process_args = [(x, _dir, cryptokey, archive, gpg_home, dry_run) for x in directories]
             pool = Pool(threads)
             pool.map(create_backup, process_args)
 
