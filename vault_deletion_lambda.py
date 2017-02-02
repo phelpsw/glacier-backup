@@ -63,7 +63,23 @@ def my_handler(event, context):
                 for archive in archives:
                     glacier.delete_archive(vaultName=vault_name,
                                                   archiveId=archive['ArchiveId'])
-                glacier.delete_vault(vaultName=vault_name)
+
+                # Try to delete the vault, if this fails because archives were
+                # too recently deleted, request another inventory (with this
+                # lambda function as the callback)
+                try:
+                    glacier.delete_vault(vaultName=vault_name)
+                except botocore.exceptions.ClientError:
+                    print 'Unable to delete vault, scheduling inventory'
+                    # Create glacier inventory request
+                    topic_arn = ':'.join(event['EventSubscriptionArn'].split(':')[:-1])
+                    print vault_name, topic_arn
+                    glacier.initiate_job(vaultName=vault_name,
+                                         jobParameters={'Format': 'JSON',
+                                                        'Type': 'inventory-retrieval',
+                                                        'SNSTopic': topic_arn
+                                                       }
+
             else:
                 print 'Unknown action {}'.format(msg['Action'])
     send_mail(['boto3@williamslabs.com'], 'deletion job running')
