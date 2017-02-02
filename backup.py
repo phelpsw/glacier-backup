@@ -16,18 +16,20 @@ import subprocess
 # - Region setting
 
 
-def upload_file(archive, _file):
-    name = os.path.basename(_file)
-    client = boto3.client('glacier')
-    response = client.upload_archive(vaultName=archive,
-                                     archiveDescription=name,
-                                     body=_file)
-    print(response)
-    hostname = open('/etc/hostname').read().rstrip()
-    timestamp = datetime.utcnow().isoformat()
-    client.add_tags_to_vault(vaultName=archive,
-                             Tags={'hostname': hostname,
-                                   'timestamp': timestamp})
+def upload_file(archive, _filename):
+    name = os.path.basename(_filename)
+    # TODO: determine if this opens in memory or if it iterates cleanly
+    with open(_filename, 'rb') as _file:
+        client = boto3.client('glacier')
+        response = client.upload_archive(vaultName=archive,
+                                         archiveDescription=name,
+                                         body=_file)
+        print(response)
+        hostname = open('/etc/hostname').read().rstrip()
+        timestamp = datetime.utcnow().isoformat()
+        client.add_tags_to_vault(vaultName=archive,
+                                 Tags={'hostname': hostname,
+                                       'timestamp': timestamp})
 
 
 def create_backup(args):
@@ -61,7 +63,7 @@ def create_backup(args):
     if not dry_run:
         upload_file(archive, abscryptfile)
     os.remove(abscryptfile)
-    
+
 
 def setup_gpg_keys(_dir, cryptokey):
     gpg_home = os.path.join(_dir, 'gnupg')
