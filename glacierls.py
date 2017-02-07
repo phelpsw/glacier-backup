@@ -117,6 +117,9 @@ role_arn = response['Role']['Arn']
 
 lambda_client = boto3.client('lambda')
 
+# Observed about 117sec / 100MB
+# 92MB RAM used for 100MB xfer
+
 try:
     response = lambda_client.get_function(FunctionName='test_lambda')
     function_arn = response['Configuration']['FunctionArn']
@@ -126,8 +129,8 @@ except botocore.exceptions.ClientError:
                                              Role=role_arn,
                                              Handler='lambdatest.my_handler',
                                              Code={'ZipFile': bytes(mf.getvalue())},
-                                             Timeout=10,
-                                             MemorySize=128)
+                                             Timeout=300,
+                                             MemorySize=256)
     print response
     function_arn = response['FunctionArn']
 
@@ -164,7 +167,7 @@ response = sns_client.publish(
 )
 print response
 '''
-
+'''
 # Create glacier inventory request
 vault_name = 'glacier_archive_20170201051302'
 response = client.initiate_job(vaultName=vault_name,
@@ -178,8 +181,8 @@ job_id = response['jobId']
 '''
 
 # Create glacier archive retrieval request
-vault_name = 'glacier_archive_20161229184309'
-archive_id = 'fcl45PEjjuAn0EGDKSQJXcB9ZFzu2MJo5CesQxZCSXAZGyL6sGZVn0c0fS8cZ_8AIRvpsMPbawXeXDfdhWxktES8pC_FbvuKPp-rbzlqigjGDAJnWwkQ6phPYxj05r7z_28PEtw1rA'
+vault_name = 'glacier_archive_20170201051302'
+archive_id = 'XGXJJR30HKivdryANmWCDIPJ6N9Hu7PXT5EcqLz2qAfmlzuyn9VKBC_G4Se-NfqATn6hi_GbwbtqCdTlcIT3AOR8HpvhQkRGo2HxlwvIVG0BL-laO0L4HCie9GGYuNfaxt82etE98A'
 response = client.initiate_job(vaultName=vault_name,
                                jobParameters={'Type': 'archive-retrieval',
                                               'ArchiveId': archive_id,
@@ -188,7 +191,6 @@ response = client.initiate_job(vaultName=vault_name,
                               )
 print(response)
 job_id = response['jobId']
-'''
 '''
 response = client.describe_job(vaultName=vault_name, jobId=job_id)
 while not response['Completed']:

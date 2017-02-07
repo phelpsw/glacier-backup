@@ -14,43 +14,11 @@ def upload_to_bucket(obj, filename):
         print 'upload_to_bucket', response
     response = s3.upload_fileobj(obj, bucket_name, filename)
 
-def my_handler(event, context):
-    print event, type(event)
-    #print context # LambdaContext type
-    inventory = 'fake inventory'
-    for record in event['Records']:
-        if 'Sns' in record:
-            msg = json.loads(record['Sns']['Message'])
-            print msg
-            glacier_client = boto3.client('glacier')
-            vault_name = msg['VaultARN'].split('/')[1]
-            if msg['Action'] == 'InventoryRetrieval':
-                response = glacier_client.get_job_output(vaultName=vault_name,
-                                                         jobId=msg['JobId'])
-                inventory = response['body']
-                upload_to_bucket(inventory, 'inventory.txt')
-            elif msg['Action'] == 'ArchiveRetrieval':
-                response = glacier_client.get_job_output(vaultName=vault_name,
-                                                         jobId=msg['JobId'])
-                print response
-                inventory = response['body']
-                upload_to_bucket(inventory, 'archive.tar.xz.gpg')
-            else:
-                print 'Unknown action {}'.format(msg['Action'])
-    '''
-    sns = boto3.client('sns')
-    number = '+12345678901'
-    response = sns.publish(PhoneNumber=number, Message='example text message' )
-    print response
-    '''
-    # Add DKIM key registration to your sending domain before running this code.
-    # http://docs.aws.amazon.com/ses/latest/DeveloperGuide/verify-addresses-and-domains.html
-
+def send_mail(to, bodytext):
     ses = boto3.client('ses')
     me = 'no-reply@williamslabs.com'
-    you = ['boto3@williamslabs.com']
+    you = to
     subject = 'Lambda Job Report'
-    bodytext = 'This is the message body'
     destination = {'ToAddresses' : you,
                    'CcAddresses' : [],
                    'BccAddresses' : []}
@@ -77,5 +45,40 @@ def my_handler(event, context):
                             Destination = destination,
                             Message = message)
     print result
+
+def my_handler(event, context):
+    #print event, type(event)
+    #print context # LambdaContext type
+    inventory = 'fake inventory'
+    for record in event['Records']:
+        if 'Sns' in record:
+            msg = json.loads(record['Sns']['Message'])
+            print msg
+            glacier_client = boto3.client('glacier')
+            vault_name = msg['VaultARN'].split('/')[1]
+            if msg['Action'] == 'InventoryRetrieval':
+                response = glacier_client.get_job_output(vaultName=vault_name,
+                                                         jobId=msg['JobId'])
+                inventory = response['body']
+                upload_to_bucket(inventory, 'inventory.txt')
+            elif msg['Action'] == 'ArchiveRetrieval':
+                response = glacier_client.get_job_output(vaultName=vault_name,
+                                                         jobId=msg['JobId'])
+                print response
+                inventory = response['body']
+                filename = vault_name + '_' + response['archiveDescription']
+                upload_to_bucket(inventory, filename)
+            else:
+                print 'Unknown action {}'.format(msg['Action'])
+    '''
+    sns = boto3.client('sns')
+    number = '+12345678901'
+    response = sns.publish(PhoneNumber=number, Message='example text message' )
+    print response
+    '''
+    # Add DKIM key registration to your sending domain before running this code.
+    # http://docs.aws.amazon.com/ses/latest/DeveloperGuide/verify-addresses-and-domains.html
+
+    send_mail(['boto3@williamslabs.com'], 'inventory / download job')
     return True
 

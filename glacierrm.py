@@ -62,7 +62,7 @@ print response
 
 glacier = boto3.client('glacier', region_name='us-east-1')
 # Create glacier inventory request but with special delete lambda
-vault_name = 'glacier_archive_20161201071932'
+vault_name = 'glacier_archive_20161210190552'
 response = glacier.initiate_job(vaultName=vault_name,
                                jobParameters={'Format': 'JSON',
                                               'Type': 'inventory-retrieval',

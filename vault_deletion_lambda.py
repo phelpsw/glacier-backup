@@ -2,18 +2,6 @@ import boto3
 import botocore
 import json
 
-def upload_to_bucket(obj, filename):
-    bucket_name = 'phelps-testbucket'
-    s3 = boto3.client('s3')
-    try:
-        response = s3.get_bucket_location(Bucket=bucket_name)
-        print 'upload_to_bucket', response
-    except botocore.exceptions.ClientError:
-        response = s3.create_bucket(ACL='private',
-                                    Bucket=bucket_name)
-        print 'upload_to_bucket', response
-    response = s3.upload_fileobj(obj, bucket_name, filename)
-
 
 def send_mail(to, bodytext):
     ses = boto3.client('ses')
@@ -72,14 +60,15 @@ def my_handler(event, context):
                 except botocore.exceptions.ClientError:
                     print 'Unable to delete vault, scheduling inventory'
                     # Create glacier inventory request
-                    topic_arn = ':'.join(event['EventSubscriptionArn'].split(':')[:-1])
+                    print record['EventSubscriptionArn']
+                    print msg['SNSTopic']
+                    topic_arn = ':'.join(record['EventSubscriptionArn'].split(':')[:-1])
                     print vault_name, topic_arn
                     glacier.initiate_job(vaultName=vault_name,
                                          jobParameters={'Format': 'JSON',
                                                         'Type': 'inventory-retrieval',
                                                         'SNSTopic': topic_arn
-                                                       }
-
+                                                       })
             else:
                 print 'Unknown action {}'.format(msg['Action'])
     send_mail(['boto3@williamslabs.com'], 'deletion job running')
