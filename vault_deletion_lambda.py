@@ -49,28 +49,34 @@ def my_handler(event, context):
                 data = json.loads(response['body'].read())
                 archives = data['ArchiveList']
                 for archive in archives:
+                    print 'Attempting to delete {}'.format(archive)
                     glacier.delete_archive(vaultName=vault_name,
-                                                  archiveId=archive['ArchiveId'])
+                                           archiveId=archive['ArchiveId'])
+                    print 'Deletion Completed {}'.format(archive)
+
+                print msg['InventoryRetrievalParameters']['StatusCode']
+                print msg['InventoryRetrievalParameters']['StatusMessage']
+                print msg['InventoryRetrievalParameters']['JobDescription']
 
                 # Try to delete the vault, if this fails because archives were
                 # too recently deleted, request another inventory (with this
                 # lambda function as the callback)
                 try:
                     glacier.delete_vault(vaultName=vault_name)
-                except botocore.exceptions.ClientError:
-                    print 'Unable to delete vault, scheduling inventory'
+                    send_mail(['boto3@williamslabs.com'],
+                              'deletion job complete {}'.format(vault_name))
+                except botocore.exceptions.ClientError as e:
+                    print 'Unable to delete vault {}, scheduling inventory'.format(vault_name)
+                    print 'Exception Handled', e
                     # Create glacier inventory request
-                    print record['EventSubscriptionArn']
-                    print msg['SNSTopic']
                     topic_arn = ':'.join(record['EventSubscriptionArn'].split(':')[:-1])
-                    print vault_name, topic_arn
                     glacier.initiate_job(vaultName=vault_name,
-                                         jobParameters={'Format': 'JSON',
-                                                        'Type': 'inventory-retrieval',
-                                                        'SNSTopic': topic_arn
-                                                       })
+                         jobParameters={'Format': 'JSON',
+                                        'Type': 'inventory-retrieval',
+                                        'SNSTopic': topic_arn,
+                                        'Description': msg['InventoryRetrievalParameters']['JobDescription']
+                                       })
             else:
                 print 'Unknown action {}'.format(msg['Action'])
-    send_mail(['boto3@williamslabs.com'], 'deletion job running')
     return True
 
