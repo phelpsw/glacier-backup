@@ -67,15 +67,18 @@ def setup_lambda_and_permissions(topic_arn):
     print response
 
 
-def create_delete_inventory(vault_name, topic_arn):
+def create_delete_inventory(vault_name, topic_arn, metadata):
     glacier = boto3.client('glacier', region_name='us-east-1')
-    metadata = json.dumps({'foo': 1, 'bar': '2'})
-    response = glacier.initiate_job(vaultName=vault_name,
-                                   jobParameters={'Format': 'JSON',
-                                                  'Type': 'inventory-retrieval',
-                                                  'SNSTopic': topic_arn,
-                                                  'Description': metadata})
-    print(response)
+    meta_str = json.dumps(metadata)
+    try:
+        response = glacier.initiate_job(vaultName=vault_name,
+                                       jobParameters={'Format': 'JSON',
+                                                      'Type': 'inventory-retrieval',
+                                                      'SNSTopic': topic_arn,
+                                                      'Description': meta_str})
+    except botocore.exceptions.ClientError as e:
+        print('Unable to delete vault {}'.format(vault_name))
+        print(e)
 
 
 if __name__ == "__main__":
@@ -94,15 +97,16 @@ if __name__ == "__main__":
     parser.add_argument("--email",
                         help="Email address to send notification of completion",
                         type=str)
-    parser.add_argument("--sms",
-                        help="Phone number to send SMS notification of completion",
-                        type=str)
     parser.add_argument('vaults', metavar='vault', type=str, nargs='+',
                         help='A list of vault names to delete')
     args = parser.parse_args()
 
+    completion_notification = {}
+    if args.email:
+        completion_notification['email'] = args.email
+
     topic_arn = create_topic_arn()
     setup_lambda_and_permissions(topic_arn)
     for vault in args.vaults:
-        create_delete_inventory(vault, topic_arn)
+        create_delete_inventory(vault, topic_arn, completion_notification)
 

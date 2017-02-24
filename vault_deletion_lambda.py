@@ -54,17 +54,17 @@ def my_handler(event, context):
                                            archiveId=archive['ArchiveId'])
                     print 'Deletion Completed {}'.format(archive)
 
-                print msg['InventoryRetrievalParameters']['StatusCode']
-                print msg['InventoryRetrievalParameters']['StatusMessage']
-                print msg['InventoryRetrievalParameters']['JobDescription']
+                metadata = json.loads(msg['JobDescription'])
 
                 # Try to delete the vault, if this fails because archives were
                 # too recently deleted, request another inventory (with this
                 # lambda function as the callback)
                 try:
                     glacier.delete_vault(vaultName=vault_name)
-                    send_mail(['boto3@williamslabs.com'],
-                              'deletion job complete {}'.format(vault_name))
+                    if 'email' in metadata.keys():
+                        send_mail([metadata['email']],
+                                  'deletion job complete {}'.\
+                                  format(vault_name))
                 except botocore.exceptions.ClientError as e:
                     print 'Unable to delete vault {}, scheduling inventory'.format(vault_name)
                     print 'Exception Handled', e
@@ -74,7 +74,7 @@ def my_handler(event, context):
                          jobParameters={'Format': 'JSON',
                                         'Type': 'inventory-retrieval',
                                         'SNSTopic': topic_arn,
-                                        'Description': msg['InventoryRetrievalParameters']['JobDescription']
+                                        'Description': msg['JobDescription']
                                        })
             else:
                 print 'Unknown action {}'.format(msg['Action'])
